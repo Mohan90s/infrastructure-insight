@@ -1,0 +1,10 @@
+# Vagrant cache and machine state
+.vagrant/
+
+# Logs and environment
+*.log
+.DS_Store
+
+# Dependencies
+node_modules/
+__pycache__/
