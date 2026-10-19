@@ -1,0 +1,152 @@
+/* Global Styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #0f172a; /* Sleek dark blue-gray */
+    color: #f8fafc;
+    margin: 0;
+    padding: 24px;
+    line-height: 1.5;
+}
+
+/* Page Centering Container */
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+/* Header Section */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+header p {
+    margin: 4px 0 0 0;
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+/* Header Actions */
+header > div:last-child {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Status Indicator Pill */
+.badge {
+    background-color: #64748b; /* Default Gray (Connecting) */
+    color: #ffffff;
+    padding: 6px 14px;
+    border-radius: 9999px; /* Pill shape */
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    transition: background-color 0.3s ease;
+}
+
+.badge.online {
+    background-color: #10b981; /* Vibrant Emerald Green */
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+}
+
+.badge.offline {
+    background-color: #ef4444; /* Rose Red */
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+}
+
+/* Refresh Button */
+button {
+    background-color: #3b82f6; /* Modern Blue */
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+button:hover {
+    background-color: #2563eb;
+}
+
+button:active {
+    transform: scale(0.97);
+}
+
+/* Responding Web Server Banner */
+.server-banner {
+    background-color: #1e293b;
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+#webServer {
+    color: #38bdf8; /* Light Cyan */
+    font-family: "Courier New", Courier, monospace;
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-left: 8px;
+}
+
+.banner-subtext {
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+/* Responsive Metric Cards Grid */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+/* Diagnostic Card */
+.card {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 18px;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover {
+    border-color: #38bdf8;
+    transform: translateY(-2px);
+}
+
+.card h3 {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Metric Value Text */
+.value {
+    color: #38bdf8;
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-family: "Courier New", Courier, monospace;
+    margin-top: 8px;
+}
