@@ -1,152 +1,348 @@
-/* Global Styles */
+/* 1. Global settings */
+:root {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #172033;
+    background: #f4f7fb;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+}
+
+/* 2. Make element sizing predictable */
+* {
+    box-sizing: border-box;
+}
+
+/* 3. Remove default page spacing */
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #0f172a; /* Sleek dark blue-gray */
-    color: #f8fafc;
     margin: 0;
-    padding: 24px;
-    line-height: 1.5;
+    min-width: 320px;
 }
 
-/* Page Centering Container */
-.container {
-    max-width: 960px;
-    margin: 0 auto;
-}
-
-/* Header Section */
-header {
+/* 4. Header at the top of the page */
+.topbar {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #334155;
-    padding-bottom: 16px;
-    margin-bottom: 24px;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 5%;
+    background: #ffffff;
+    border-bottom: 1px solid #e3e8f0;
 }
 
-header h1 {
-    margin: 0;
-    font-size: 1.7rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-}
-
-header p {
-    margin: 4px 0 0 0;
-    color: #94a3b8;
-    font-size: 0.9rem;
-}
-
-/* Header Actions */
-header > div:last-child {
+/* 5. Brand name and icon */
+.brand {
     display: flex;
     align-items: center;
     gap: 12px;
+    color: inherit;
+    text-decoration: none;
 }
 
-/* Status Indicator Pill */
-.badge {
-    background-color: #64748b; /* Default Gray (Connecting) */
+.brand-icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: #e49114;
     color: #ffffff;
-    padding: 6px 14px;
-    border-radius: 9999px; /* Pill shape */
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    transition: background-color 0.3s ease;
+    font-size: 22px;
+    font-weight: bold;
 }
 
-.badge.online {
-    background-color: #10b981; /* Vibrant Emerald Green */
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.badge.offline {
-    background-color: #ef4444; /* Rose Red */
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+.brand-text small {
+    color: #68758a;
 }
 
-/* Refresh Button */
+/* 6. Connection status */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #536176;
+    font-size: 14px;
+}
+
+.status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #94a3b8;
+}
+
+/* JavaScript can add these classes later */
+.status-dot.online {
+    background: #16a34a;
+}
+
+.status-dot.offline {
+    background: #dc2626;
+}
+
+/* 7. Main content area */
+.container {
+    width: min(1120px, 90%);
+    margin: 36px auto;
+}
+
+/* 8. Page title and refresh button */
+.page-heading,
+.section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.page-heading {
+    margin-bottom: 28px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: #2457d6;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+}
+
+h1,
+h2,
+p {
+    margin-top: 0;
+}
+
+h1 {
+    margin-bottom: 8px;
+    font-size: clamp(26px, 4vw, 36px);
+}
+
+h2 {
+    margin-bottom: 8px;
+    font-size: 21px;
+}
+
+.subtitle {
+    margin-bottom: 0;
+    color: #68758a;
+    line-height: 1.6;
+}
+
 button {
-    background-color: #3b82f6; /* Modern Blue */
+    padding: 12px 18px;
+    border: 0;
+    border-radius: 9px;
+    background: #e49114;
     color: #ffffff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    transition: background 0.2s ease, transform 0.2s ease;
 }
 
 button:hover {
-    background-color: #2563eb;
+    background: #1945b5;
+    transform: translateY(-1px);
 }
 
-button:active {
-    transform: scale(0.97);
+button:focus-visible {
+    outline: 3px solid #93b4ff;
+    outline-offset: 3px;
 }
 
-/* Responding Web Server Banner */
-.server-banner {
-    background-color: #1e293b;
-    border: 1px solid #3b82f6;
-    border-radius: 8px;
-    padding: 16px 20px;
-    margin-bottom: 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-#webServer {
-    color: #38bdf8; /* Light Cyan */
-    font-family: "Courier New", Courier, monospace;
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin-left: 8px;
-}
-
-.banner-subtext {
-    color: #94a3b8;
-    font-size: 0.85rem;
-}
-
-/* Responsive Metric Cards Grid */
-.grid {
+/* 9. Four server overview cards */
+.server-overview {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 36px;
+}
+
+.overview-item,
+.metric-card,
+.details-section {
+    background: #ffffff;
+    border: 1px solid #e3e8f0;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgb(23 32 51 / 4%);
+}
+
+.overview-item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    padding: 20px;
+}
+
+.label,
+.metric-label {
+    color: #68758a;
+    font-size: 13px;
+}
+
+.overview-item strong {
+    overflow-wrap: anywhere;
+    font-size: 16px;
+}
+
+/* 10. Resource metric cards */
+.metrics-section {
+    margin-bottom: 36px;
+}
+
+.section-heading {
+    margin-bottom: 18px;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
 }
 
-/* Diagnostic Card */
-.card {
-    background-color: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    padding: 18px;
-    transition: border-color 0.2s ease, transform 0.2s ease;
+.metric-card {
+    min-width: 0;
+    padding: 22px;
 }
 
-.card:hover {
-    border-color: #38bdf8;
-    transform: translateY(-2px);
+.metric-label {
+    display: block;
+    margin-bottom: 16px;
 }
 
-.card h3 {
-    margin: 0;
-    color: #94a3b8;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+.metric-value {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 30px;
+    overflow-wrap: anywhere;
 }
 
-/* Metric Value Text */
-.value {
-    color: #38bdf8;
-    font-size: 1.35rem;
-    font-weight: 700;
-    font-family: "Courier New", Courier, monospace;
-    margin-top: 8px;
+.metric-description {
+    margin: 12px 0 0;
+    color: #68758a;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* 11. Memory usage progress bar */
+.progress-track {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #e8edf5;
+}
+
+.progress-bar {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: #2457d6;
+    transition: width 0.4s ease;
+}
+
+/* 12. Detailed system information */
+.details-section {
+    padding: 24px;
+}
+
+.details-section .section-heading>span {
+    color: #68758a;
+    font-size: 12px;
+}
+
+.details-list {
+    margin-top: 18px;
+}
+
+.detail-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 15px 0;
+    border-bottom: 1px solid #edf0f5;
+    color: #536176;
+    font-size: 14px;
+}
+
+.detail-row:last-child {
+    border-bottom: 0;
+}
+
+.detail-row strong {
+    color: #172033;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+/* 13. Error message */
+.error-message {
+    margin-top: 20px;
+    padding: 14px 16px;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+/* 14. Footer */
+.footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 5%;
+    border-top: 1px solid #e3e8f0;
+    color: #68758a;
+    font-size: 12px;
+}
+
+.footer p {
+    margin-bottom: 0;
+}
+
+/* 15. Tablet layout */
+@media (max-width: 900px) {
+
+    .server-overview,
+    .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* 16. Mobile layout */
+@media (max-width: 600px) {
+
+    .topbar,
+    .page-heading,
+    .section-heading,
+    .footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .container {
+        margin: 26px auto;
+    }
+
+    .server-overview,
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .detail-row strong {
+        text-align: left;
+    }
 }

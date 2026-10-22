@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description" content="Infrastructure Insight server monitoring dashboard">
+
+    <title>Infrastructure Insight</title>
+
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+
+<body>
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="Infrastructure Insight home">
+            <span class="brand-icon">In</span>
+
+            <span class="brand-text">
+                <strong>Infrastructure Insight</strong>
+                <small>Infrastructure monitoring</small>
+            </span>
+        </a>
+
+        <div class="connection-status">
+            <span id="status-indicator" class="status-dot"></span>
+            <span id="connection-status">Checking connection...</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="page-heading">
+            <div>
+                <p class="eyebrow">OVERVIEW</p>
+                <h1>System Dashboard</h1>
+                <p class="subtitle">
+                    Monitor your infrastructure health and server resources.
+                </p>
+            </div>
+
+            <button id="refresh-button" type="button">
+                Refresh metrics
+            </button>
+        </section>
+
+        <section class="server-overview" aria-label="Server overview">
+            <article class="overview-item">
+                <span class="label">Backend hostname</span>
+                <strong id="hostname">Loading...</strong>
+            </article>
+
+            <article class="overview-item">
+                <span class="label">Operating system</span>
+                <strong id="operating-system">Loading...</strong>
+            </article>
+
+            <article class="overview-item">
+                <span class="label">Architecture</span>
+                <strong id="architecture">Loading...</strong>
+            </article>
+
+            <article class="overview-item">
+                <span class="label">Responding web server</span>
+                <strong id="web-server">Waiting for server info</strong>
+            </article>
+        </section>
+
+        <section class="metrics-section" aria-labelledby="metrics-heading">
+            <div class="section-heading">
+                <div>
+                    <h2 id="metrics-heading">Resource metrics</h2>
+                    <p class="subtitle">
+                        Current measurements reported by the backend.
+                    </p>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <article class="metric-card">
+                    <span class="metric-label">CPU load · 1 minute</span>
+                    <strong id="cpu-load-1" class="metric-value">--</strong>
+                    <p class="metric-description">
+                        One-minute system load average
+                    </p>
+                </article>
+
+                <article class="metric-card">
+                    <span class="metric-label">Memory usage</span>
+                    <strong id="memory-usage" class="metric-value">--%</strong>
+
+                    <div class="progress-track" role="progressbar" aria-label="System memory usage" aria-valuemin="0"
+                        aria-valuemax="100" aria-valuenow="0" id="memory-progress">
+                        <div id="memory-bar" class="progress-bar"></div>
+                    </div>
+
+                    <p id="memory-description" class="metric-description">
+                        Waiting for memory data
+                    </p>
+                </article>
+
+                <article class="metric-card">
+                    <span class="metric-label">System uptime</span>
+                    <strong id="system-uptime" class="metric-value">--</strong>
+                    <p class="metric-description">
+                        Time since the system started
+                    </p>
+                </article>
+
+                <article class="metric-card">
+                    <span class="metric-label">CPU cores</span>
+                    <strong id="cpu-cores" class="metric-value">--</strong>
+                    <p class="metric-description">
+                        Logical CPUs available to the Go process
+                    </p>
+                </article>
+            </div>
+        </section>
+
+        <section class="details-section" aria-labelledby="details-heading">
+            <div class="section-heading">
+                <div>
+                    <h2 id="details-heading">Detailed system information</h2>
+                    <p class="subtitle">
+                        Additional information collected by the backend.
+                    </p>
+                </div>
+
+                <span id="last-updated">Not updated yet</span>
+            </div>
+
+            <div class="details-list">
+                <div class="detail-row">
+                    <span>CPU load · 5 minutes</span>
+                    <strong id="cpu-load-5">--</strong>
+                </div>
+
+                <div class="detail-row">
+                    <span>CPU load · 15 minutes</span>
+                    <strong id="cpu-load-15">--</strong>
+                </div>
+
+                <div class="detail-row">
+                    <span>Total system memory</span>
+                    <strong id="memory-total">--</strong>
+                </div>
+
+                <div class="detail-row">
+                    <span>Available system memory</span>
+                    <strong id="memory-available">--</strong>
+                </div>
+
+                <div class="detail-row">
+                    <span>Go application memory</span>
+                    <strong id="application-memory">--</strong>
+                </div>
+
+                <div class="detail-row">
+                    <span>Client IP address</span>
+                    <strong id="client-ip">--</strong>
+                </div>
+            </div>
+        </section>
+
+        <p id="error-message" class="error-message" role="alert" hidden></p>
+    </main>
+
+    <footer class="footer">
+        <p>Infrastructure Insight · DevOps diagnostic application</p>
+        <p id="footer-status">Waiting for the first metrics response</p>
+    </footer>
+</body>
+
+</html>
