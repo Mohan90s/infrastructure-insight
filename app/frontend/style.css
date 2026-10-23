@@ -1,35 +1,100 @@
-/* 1. Global settings */
+/* ============================================
+   1. DESIGN TOKENS & GLOBAL SETTINGS
+   ============================================ */
 :root {
-    font-family: Arial, Helvetica, sans-serif;
-    color: #172033;
-    background: #f4f7fb;
+    --font: 'Inter', Arial, Helvetica, sans-serif;
+    --bg:           #0f1117;
+    --bg-surface:   #171b26;
+    --bg-card:      #1e2231;
+    --bg-card-hover:#252a3a;
+    --border:       #2a2f42;
+    --border-light: #323748;
+
+    --text-primary:   #e8edf5;
+    --text-secondary: #8892a4;
+    --text-muted:     #525d70;
+
+    --blue:   #3b82f6;
+    --purple: #8b5cf6;
+    --green:  #10b981;
+    --orange: #f59e0b;
+    --red:    #ef4444;
+    --teal:   #06b6d4;
+
+    --blue-dim:   rgba(59, 130, 246, 0.12);
+    --purple-dim: rgba(139, 92, 246, 0.12);
+    --green-dim:  rgba(16, 185, 129, 0.12);
+    --orange-dim: rgba(245, 158, 11, 0.12);
+    --teal-dim:   rgba(6, 182, 212, 0.12);
+
+    --radius-sm: 8px;
+    --radius:    14px;
+    --radius-lg: 18px;
+
+    font-family: var(--font);
+    color: var(--text-primary);
+    background: var(--bg);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* 2. Make element sizing predictable */
-* {
+/* ============================================
+   2. RESET
+   ============================================ */
+*, *::before, *::after {
     box-sizing: border-box;
 }
 
-/* 3. Remove default page spacing */
 body {
     margin: 0;
     min-width: 320px;
+    background: var(--bg);
 }
 
-/* 4. Header at the top of the page */
+h1, h2, p {
+    margin-top: 0;
+}
+
+h1 {
+    margin-bottom: 8px;
+    font-size: clamp(26px, 4vw, 36px);
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+}
+
+h2 {
+    margin-bottom: 6px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* ============================================
+   3. TOP BAR
+   ============================================ */
 .topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 20px;
-    padding: 18px 5%;
-    background: #ffffff;
-    border-bottom: 1px solid #e3e8f0;
+    padding: 16px 5%;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
-/* 5. Brand name and icon */
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Brand */
 .brand {
     display: flex;
     align-items: center;
@@ -43,55 +108,101 @@ body {
     place-items: center;
     width: 42px;
     height: 42px;
-    border-radius: 12px;
-    background: #e49114;
-    color: #ffffff;
-    font-size: 22px;
-    font-weight: bold;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--blue), var(--teal));
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+}
+
+.brand-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke: #fff;
 }
 
 .brand-text {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
+}
+
+.brand-text strong {
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 700;
 }
 
 .brand-text small {
-    color: #68758a;
+    color: var(--text-secondary);
+    font-size: 12px;
 }
 
-/* 6. Connection status */
+/* Auto-refresh badge */
+.auto-refresh-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 99px;
+    background: var(--blue-dim);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: var(--blue);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.auto-refresh-badge svg {
+    width: 13px;
+    height: 13px;
+    stroke: var(--blue);
+}
+
+/* Connection status */
 .connection-status {
     display: flex;
     align-items: center;
-    gap: 9px;
-    color: #536176;
-    font-size: 14px;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
 }
 
+/* Pulsing status dot */
 .status-dot {
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: #94a3b8;
+    background: var(--text-muted);
+    flex-shrink: 0;
 }
 
-/* JavaScript can add these classes later */
 .status-dot.online {
-    background: #16a34a;
+    background: var(--green);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+    animation: pulse-green 2s infinite;
 }
 
 .status-dot.offline {
-    background: #dc2626;
+    background: var(--red);
 }
 
-/* 7. Main content area */
+@keyframes pulse-green {
+    0%   { box-shadow: 0 0 0 0   rgba(16, 185, 129, 0.6); }
+    70%  { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0   rgba(16, 185, 129, 0); }
+}
+
+/* ============================================
+   4. MAIN CONTAINER
+   ============================================ */
 .container {
-    width: min(1120px, 90%);
-    margin: 36px auto;
+    width: min(1140px, 90%);
+    margin: 40px auto;
 }
 
-/* 8. Page title and refresh button */
+/* ============================================
+   5. PAGE HEADING
+   ============================================ */
 .page-heading,
 .section-heading {
     display: flex;
@@ -101,62 +212,68 @@ body {
 }
 
 .page-heading {
-    margin-bottom: 28px;
+    margin-bottom: 32px;
 }
 
 .eyebrow {
     margin: 0 0 8px;
-    color: #2457d6;
-    font-size: 12px;
-    font-weight: bold;
-    letter-spacing: 1.5px;
-}
-
-h1,
-h2,
-p {
-    margin-top: 0;
-}
-
-h1 {
-    margin-bottom: 8px;
-    font-size: clamp(26px, 4vw, 36px);
-}
-
-h2 {
-    margin-bottom: 8px;
-    font-size: 21px;
+    color: var(--blue);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
 }
 
 .subtitle {
     margin-bottom: 0;
-    color: #68758a;
+    color: var(--text-secondary);
+    font-size: 14px;
     line-height: 1.6;
 }
 
+/* Refresh button */
 button {
-    padding: 12px 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
     border: 0;
-    border-radius: 9px;
-    background: #e49114;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--blue), #6366f1);
     color: #ffffff;
+    font-family: var(--font);
     font-size: 14px;
-    font-weight: bold;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s ease, transform 0.2s ease;
+    transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+}
+
+button svg {
+    width: 15px;
+    height: 15px;
+    stroke: #fff;
 }
 
 button:hover {
-    background: #1945b5;
-    transform: translateY(-1px);
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
 }
 
 button:focus-visible {
-    outline: 3px solid #93b4ff;
+    outline: 3px solid var(--blue);
     outline-offset: 3px;
 }
 
-/* 9. Four server overview cards */
+/* ============================================
+   6. SERVER OVERVIEW CARDS
+   ============================================ */
 .server-overview {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -164,41 +281,66 @@ button:focus-visible {
     margin-bottom: 36px;
 }
 
-.overview-item,
-.metric-card,
-.details-section {
-    background: #ffffff;
-    border: 1px solid #e3e8f0;
-    border-radius: 14px;
-    box-shadow: 0 4px 14px rgb(23 32 51 / 4%);
-}
-
 .overview-item {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    min-width: 0;
+    gap: 10px;
     padding: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
-.label,
-.metric-label {
-    color: #68758a;
-    font-size: 13px;
+.overview-item:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-light);
+    transform: translateY(-2px);
+}
+
+/* Colored icon badges */
+.overview-icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+}
+
+.overview-icon svg {
+    width: 17px;
+    height: 17px;
+}
+
+.icon-blue   { background: var(--blue-dim);   } .icon-blue   svg { stroke: var(--blue); }
+.icon-purple { background: var(--purple-dim); } .icon-purple svg { stroke: var(--purple); }
+.icon-teal   { background: var(--teal-dim);   } .icon-teal   svg { stroke: var(--teal); }
+.icon-orange { background: var(--orange-dim); } .icon-orange svg { stroke: var(--orange); }
+
+.label {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
 }
 
 .overview-item strong {
     overflow-wrap: anywhere;
-    font-size: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-/* 10. Resource metric cards */
+/* ============================================
+   7. METRIC CARDS
+   ============================================ */
 .metrics-section {
     margin-bottom: 36px;
 }
 
 .section-heading {
-    margin-bottom: 18px;
+    margin-bottom: 20px;
 }
 
 .metrics-grid {
@@ -208,57 +350,131 @@ button:focus-visible {
 }
 
 .metric-card {
+    position: relative;
     min-width: 0;
     padding: 22px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
-.metric-label {
-    display: block;
-    margin-bottom: 16px;
+.metric-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-light);
+    transform: translateY(-2px);
 }
+
+/* Colored top border accent per card */
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.accent-blue::before   { background: linear-gradient(90deg, var(--blue), var(--teal)); }
+.accent-purple::before { background: linear-gradient(90deg, var(--purple), var(--blue)); }
+.accent-green::before  { background: linear-gradient(90deg, var(--green), var(--teal)); }
+.accent-orange::before { background: linear-gradient(90deg, var(--orange), var(--red)); }
+
+.metric-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.metric-label svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+
+.accent-blue   .metric-label svg { stroke: var(--blue); }
+.accent-purple .metric-label svg { stroke: var(--purple); }
+.accent-green  .metric-label svg { stroke: var(--green); }
+.accent-orange .metric-label svg { stroke: var(--orange); }
 
 .metric-value {
     display: block;
-    margin-bottom: 12px;
-    font-size: 30px;
+    margin-bottom: 10px;
+    font-size: 32px;
+    font-weight: 800;
     overflow-wrap: anywhere;
+    letter-spacing: -1px;
+    color: var(--text-primary);
 }
 
 .metric-description {
-    margin: 12px 0 0;
-    color: #68758a;
-    font-size: 13px;
+    margin: 10px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
     line-height: 1.5;
 }
 
-/* 11. Memory usage progress bar */
+/* CPU sparkline chart */
+.chart-wrapper {
+    margin-top: 16px;
+    height: 50px;
+}
+
+.chart-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ============================================
+   8. MEMORY PROGRESS BAR
+   ============================================ */
 .progress-track {
-    height: 8px;
+    height: 6px;
     overflow: hidden;
-    border-radius: 10px;
-    background: #e8edf5;
+    border-radius: 99px;
+    background: var(--border);
 }
 
 .progress-bar {
     width: 0;
     height: 100%;
     border-radius: inherit;
-    background: #2457d6;
-    transition: width 0.4s ease;
+    background: var(--purple);
+    transition: width 0.5s ease, background 0.3s ease;
 }
 
-/* 12. Detailed system information */
+/* ============================================
+   9. DETAILS SECTION
+   ============================================ */
 .details-section {
     padding: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
 }
 
-.details-section .section-heading>span {
-    color: #68758a;
-    font-size: 12px;
+.last-updated-badge {
+    padding: 5px 12px;
+    border-radius: 99px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
 }
 
 .details-list {
-    margin-top: 18px;
+    margin-top: 20px;
 }
 
 .detail-row {
@@ -266,40 +482,63 @@ button:focus-visible {
     align-items: center;
     justify-content: space-between;
     gap: 20px;
-    padding: 15px 0;
-    border-bottom: 1px solid #edf0f5;
-    color: #536176;
-    font-size: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    transition: color 0.15s ease;
 }
 
 .detail-row:last-child {
     border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.detail-row span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.detail-row span svg {
+    width: 14px;
+    height: 14px;
+    stroke: var(--text-muted);
+    flex-shrink: 0;
 }
 
 .detail-row strong {
-    color: #172033;
+    color: var(--text-primary);
+    font-weight: 600;
     text-align: right;
     overflow-wrap: anywhere;
 }
 
-/* 13. Error message */
+/* ============================================
+   10. ERROR MESSAGE
+   ============================================ */
 .error-message {
     margin-top: 20px;
-    padding: 14px 16px;
-    border: 1px solid #fecaca;
-    border-radius: 10px;
-    background: #fef2f2;
-    color: #b91c1c;
+    padding: 14px 18px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius-sm);
+    background: rgba(239, 68, 68, 0.08);
+    color: #fca5a5;
+    font-size: 14px;
 }
 
-/* 14. Footer */
+/* ============================================
+   11. FOOTER
+   ============================================ */
 .footer {
     display: flex;
     justify-content: space-between;
     gap: 16px;
-    padding: 22px 5%;
-    border-top: 1px solid #e3e8f0;
-    color: #68758a;
+    padding: 20px 5%;
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-muted);
     font-size: 12px;
 }
 
@@ -307,18 +546,20 @@ button:focus-visible {
     margin-bottom: 0;
 }
 
-/* 15. Tablet layout */
-@media (max-width: 900px) {
-
+/* ============================================
+   12. RESPONSIVE — TABLET
+   ============================================ */
+@media (max-width: 960px) {
     .server-overview,
     .metrics-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
-/* 16. Mobile layout */
+/* ============================================
+   13. RESPONSIVE — MOBILE
+   ============================================ */
 @media (max-width: 600px) {
-
     .topbar,
     .page-heading,
     .section-heading,
@@ -327,8 +568,14 @@ button:focus-visible {
         flex-direction: column;
     }
 
+    .topbar-right {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
     .container {
-        margin: 26px auto;
+        margin: 24px auto;
     }
 
     .server-overview,
@@ -345,4 +592,4 @@ button:focus-visible {
     .detail-row strong {
         text-align: left;
     }
-}
+}

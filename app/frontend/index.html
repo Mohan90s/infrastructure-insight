@@ -4,160 +4,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="description" content="Infrastructure Insight server monitoring dashboard">
-
+    <meta name="description" content="Infrastructure Insight — real-time server monitoring dashboard">
     <title>Infrastructure Insight</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Chart.js for CPU sparkline -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
 </head>
 
 <body>
+    <!-- ===== TOP BAR ===== -->
     <header class="topbar">
         <a class="brand" href="/" aria-label="Infrastructure Insight home">
-            <span class="brand-icon">In</span>
-
+            <span class="brand-icon">
+                <i data-lucide="server"></i>
+            </span>
             <span class="brand-text">
                 <strong>Infrastructure Insight</strong>
                 <small>Infrastructure monitoring</small>
             </span>
         </a>
 
-        <div class="connection-status">
-            <span id="status-indicator" class="status-dot"></span>
-            <span id="connection-status">Checking connection...</span>
+        <div class="topbar-right">
+            <div class="auto-refresh-badge">
+                <i data-lucide="refresh-cw" id="auto-refresh-icon"></i>
+                <span>Auto-refresh 30s</span>
+            </div>
+            <div class="connection-status">
+                <span id="status-indicator" class="status-dot"></span>
+                <span id="connection-status">Checking connection...</span>
+            </div>
         </div>
     </header>
 
     <main class="container">
+
+        <!-- ===== PAGE HEADING ===== -->
         <section class="page-heading">
             <div>
                 <p class="eyebrow">OVERVIEW</p>
                 <h1>System Dashboard</h1>
-                <p class="subtitle">
-                    Monitor your infrastructure health and server resources.
-                </p>
+                <p class="subtitle">Monitor your infrastructure health and server resources in real time.</p>
             </div>
-
             <button id="refresh-button" type="button">
+                <i data-lucide="refresh-cw"></i>
                 Refresh metrics
             </button>
         </section>
 
+        <!-- ===== SERVER OVERVIEW CARDS ===== -->
         <section class="server-overview" aria-label="Server overview">
             <article class="overview-item">
+                <div class="overview-icon icon-blue"><i data-lucide="monitor"></i></div>
                 <span class="label">Backend hostname</span>
                 <strong id="hostname">Loading...</strong>
             </article>
 
             <article class="overview-item">
+                <div class="overview-icon icon-purple"><i data-lucide="layers"></i></div>
                 <span class="label">Operating system</span>
                 <strong id="operating-system">Loading...</strong>
             </article>
 
             <article class="overview-item">
+                <div class="overview-icon icon-teal"><i data-lucide="cpu"></i></div>
                 <span class="label">Architecture</span>
                 <strong id="architecture">Loading...</strong>
             </article>
 
             <article class="overview-item">
+                <div class="overview-icon icon-orange"><i data-lucide="globe"></i></div>
                 <span class="label">Responding web server</span>
                 <strong id="web-server">Waiting for server info</strong>
             </article>
         </section>
 
+        <!-- ===== RESOURCE METRICS ===== -->
         <section class="metrics-section" aria-labelledby="metrics-heading">
             <div class="section-heading">
                 <div>
                     <h2 id="metrics-heading">Resource metrics</h2>
-                    <p class="subtitle">
-                        Current measurements reported by the backend.
-                    </p>
+                    <p class="subtitle">Current measurements reported by the backend.</p>
                 </div>
             </div>
 
             <div class="metrics-grid">
-                <article class="metric-card">
-                    <span class="metric-label">CPU load · 1 minute</span>
+
+                <!-- CPU Load with sparkline chart -->
+                <article class="metric-card accent-blue">
+                    <span class="metric-label"><i data-lucide="activity"></i> CPU load · 1 minute</span>
                     <strong id="cpu-load-1" class="metric-value">--</strong>
-                    <p class="metric-description">
-                        One-minute system load average
-                    </p>
+                    <p class="metric-description">One-minute system load average</p>
+                    <div class="chart-wrapper">
+                        <canvas id="cpu-chart" aria-label="CPU load history"></canvas>
+                    </div>
                 </article>
 
-                <article class="metric-card">
-                    <span class="metric-label">Memory usage</span>
+                <!-- Memory -->
+                <article class="metric-card accent-purple">
+                    <span class="metric-label"><i data-lucide="database"></i> Memory usage</span>
                     <strong id="memory-usage" class="metric-value">--%</strong>
-
-                    <div class="progress-track" role="progressbar" aria-label="System memory usage" aria-valuemin="0"
-                        aria-valuemax="100" aria-valuenow="0" id="memory-progress">
+                    <div class="progress-track" role="progressbar" aria-label="System memory usage"
+                        aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="memory-progress">
                         <div id="memory-bar" class="progress-bar"></div>
                     </div>
-
-                    <p id="memory-description" class="metric-description">
-                        Waiting for memory data
-                    </p>
+                    <p id="memory-description" class="metric-description">Waiting for memory data</p>
                 </article>
 
-                <article class="metric-card">
-                    <span class="metric-label">System uptime</span>
+                <!-- Uptime -->
+                <article class="metric-card accent-green">
+                    <span class="metric-label"><i data-lucide="clock"></i> System uptime</span>
                     <strong id="system-uptime" class="metric-value">--</strong>
-                    <p class="metric-description">
-                        Time since the system started
-                    </p>
+                    <p class="metric-description">Time since the system started</p>
                 </article>
 
-                <article class="metric-card">
-                    <span class="metric-label">CPU cores</span>
+                <!-- CPU Cores -->
+                <article class="metric-card accent-orange">
+                    <span class="metric-label"><i data-lucide="cpu"></i> CPU cores</span>
                     <strong id="cpu-cores" class="metric-value">--</strong>
-                    <p class="metric-description">
-                        Logical CPUs available to the Go process
-                    </p>
+                    <p class="metric-description">Logical CPUs available to the Go process</p>
                 </article>
+
             </div>
         </section>
 
+        <!-- ===== DETAILED SYSTEM INFO ===== -->
         <section class="details-section" aria-labelledby="details-heading">
             <div class="section-heading">
                 <div>
                     <h2 id="details-heading">Detailed system information</h2>
-                    <p class="subtitle">
-                        Additional information collected by the backend.
-                    </p>
+                    <p class="subtitle">Additional information collected by the backend.</p>
                 </div>
-
-                <span id="last-updated">Not updated yet</span>
+                <span id="last-updated" class="last-updated-badge">Not updated yet</span>
             </div>
 
             <div class="details-list">
                 <div class="detail-row">
-                    <span>CPU load · 5 minutes</span>
+                    <span><i data-lucide="trending-up"></i> CPU load · 5 minutes</span>
                     <strong id="cpu-load-5">--</strong>
                 </div>
-
                 <div class="detail-row">
-                    <span>CPU load · 15 minutes</span>
+                    <span><i data-lucide="trending-up"></i> CPU load · 15 minutes</span>
                     <strong id="cpu-load-15">--</strong>
                 </div>
-
                 <div class="detail-row">
-                    <span>Total system memory</span>
+                    <span><i data-lucide="hard-drive"></i> Total system memory</span>
                     <strong id="memory-total">--</strong>
                 </div>
-
                 <div class="detail-row">
-                    <span>Available system memory</span>
+                    <span><i data-lucide="hard-drive"></i> Available system memory</span>
                     <strong id="memory-available">--</strong>
                 </div>
-
                 <div class="detail-row">
-                    <span>Go application memory</span>
+                    <span><i data-lucide="box"></i> Go application memory</span>
                     <strong id="application-memory">--</strong>
                 </div>
-
                 <div class="detail-row">
-                    <span>Client IP address</span>
+                    <span><i data-lucide="wifi"></i> Client IP address</span>
                     <strong id="client-ip">--</strong>
                 </div>
             </div>
