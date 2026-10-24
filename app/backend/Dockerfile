@@ -1,5 +1,5 @@
 # Stage 1: Use Go to compile the application into a Linux executable.
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24.5-alpine AS builder
 
 # Set /app as the working directory for the build process.
 WORKDIR /app
@@ -10,7 +10,7 @@ COPY go.mod go.sum* ./
 # Download the Go dependencies required by the application.
 RUN go mod download
 
-# Copy the application source code into the build directory.
+# Copy the application source code into the build directory
 COPY . .
 
 # Compile the Go application into a smaller Linux executable named server.

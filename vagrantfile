@@ -20,6 +20,33 @@ Vagrant.configure("2") do |config|
         vb.cpus = 1
         vb.gui = false
       end
+
+      # Provision Docker on web servers and app server
+      if ["web-01", "web-02", "app-server"].include?(server[:name])
+        node.vm.provision "shell", inline: <<-SHELL
+          apt-get update -y
+          apt-get install -y docker.io
+          systemctl enable --now docker
+          usermod -aG docker vagrant
+        SHELL
+      end
+
+      # Provision HAProxy on load balancer
+      if server[:name] == "load-balancer"
+        node.vm.provision "shell", inline: <<-SHELL
+          apt-get update -y
+          apt-get install -y haproxy
+          systemctl enable --now haproxy
+        SHELL
+      end
+
+      # Provision rsync on backup server
+      if server[:name] == "backup-server"
+        node.vm.provision "shell", inline: <<-SHELL
+          apt-get update -y
+          apt-get install -y rsync
+        SHELL
+      end
     end
   end
 end

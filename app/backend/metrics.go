@@ -20,13 +20,13 @@ type ServerInfo struct {
 
 type CPUInfo struct {
 	Cores         int     `json:"cores"`
-	LoadAverage1  float64 `json:"loadAverage1Min"`
-	LoadAverage5  float64 `json:"loadAverage5Min"`
-	LoadAverage15 float64 `json:"loadAverage15Min"`
+	LoadAverage1  float64 `json:"loadAverage1"`
+	LoadAverage5  float64 `json:"loadAverage5"`
+	LoadAverage15 float64 `json:"loadAverage15"`
 }
 
 type MemoryInfo struct {
-	AppUsedMB         uint64  `json:"appMemoryUsedMB"`
+	AppUsedMB         uint64  `json:"appUsedMB"`
 	SystemTotalMB     uint64  `json:"systemTotalMB"`
 	SystemAvailableMB uint64  `json:"systemAvailableMB"`
 	UsagePercent      float64 `json:"usagePercent"`
@@ -36,7 +36,7 @@ type MetricsResponse struct {
 	Server   ServerInfo `json:"server"`
 	CPU      CPUInfo    `json:"cpu"`
 	Memory   MemoryInfo `json:"memory"`
-	ClientIP string     `json:"clientIp"`
+	ClientIP string     `json:"clientIP"`
 }
 
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
