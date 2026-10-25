@@ -11,7 +11,7 @@
 const params = new URLSearchParams(window.location.search);
 
 const API_URL =
-    params.get("api") || "http://localhost:5000/metrics";
+    params.get("api") || "/api/metrics";
 
 const AUTO_REFRESH_INTERVAL_MS = 30000; // 30 seconds
 
