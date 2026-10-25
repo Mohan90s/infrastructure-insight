@@ -104,6 +104,7 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 		ClientIP: clientIP,
 	}
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(metrics); err != nil {

@@ -5,9 +5,13 @@
 // 1. CONFIGURATION
 // ==========================================
 
-// Temporary URL for local development.
-// Later, we will connect through Nginx using "/api/metrics".
-const API_URL = "http://localhost:5000/metrics";
+// API configuration.
+// Override the URL with ?api=http://YOUR-SERVER:5000/metrics
+// when the frontend is accessed remotely.
+const params = new URLSearchParams(window.location.search);
+
+const API_URL =
+    params.get("api") || "http://localhost:5000/metrics";
 
 const AUTO_REFRESH_INTERVAL_MS = 30000; // 30 seconds
 
@@ -17,37 +21,37 @@ const AUTO_REFRESH_INTERVAL_MS = 30000; // 30 seconds
 // ==========================================
 
 // Server information
-const hostnameElement        = document.getElementById("hostname");
+const hostnameElement = document.getElementById("hostname");
 const operatingSystemElement = document.getElementById("operating-system");
-const architectureElement    = document.getElementById("architecture");
-const webServerElement       = document.getElementById("web-server");
+const architectureElement = document.getElementById("architecture");
+const webServerElement = document.getElementById("web-server");
 
 // CPU information
-const cpuLoad1Element  = document.getElementById("cpu-load-1");
-const cpuLoad5Element  = document.getElementById("cpu-load-5");
+const cpuLoad1Element = document.getElementById("cpu-load-1");
+const cpuLoad5Element = document.getElementById("cpu-load-5");
 const cpuLoad15Element = document.getElementById("cpu-load-15");
-const cpuCoresElement  = document.getElementById("cpu-cores");
+const cpuCoresElement = document.getElementById("cpu-cores");
 
 // Memory information
-const memoryUsageElement       = document.getElementById("memory-usage");
-const memoryBarElement         = document.getElementById("memory-bar");
-const memoryProgressElement    = document.getElementById("memory-progress");
+const memoryUsageElement = document.getElementById("memory-usage");
+const memoryBarElement = document.getElementById("memory-bar");
+const memoryProgressElement = document.getElementById("memory-progress");
 const memoryDescriptionElement = document.getElementById("memory-description");
-const memoryTotalElement       = document.getElementById("memory-total");
-const memoryAvailableElement   = document.getElementById("memory-available");
+const memoryTotalElement = document.getElementById("memory-total");
+const memoryAvailableElement = document.getElementById("memory-available");
 const applicationMemoryElement = document.getElementById("application-memory");
 
 // Uptime and client information
-const uptimeElement   = document.getElementById("system-uptime");
+const uptimeElement = document.getElementById("system-uptime");
 const clientIpElement = document.getElementById("client-ip");
 
 // Status and interface elements
 const connectionStatusElement = document.getElementById("connection-status");
-const statusIndicatorElement  = document.getElementById("status-indicator");
-const refreshButton           = document.getElementById("refresh-button");
-const errorMessageElement     = document.getElementById("error-message");
-const lastUpdatedElement      = document.getElementById("last-updated");
-const footerStatusElement     = document.getElementById("footer-status");
+const statusIndicatorElement = document.getElementById("status-indicator");
+const refreshButton = document.getElementById("refresh-button");
+const errorMessageElement = document.getElementById("error-message");
+const lastUpdatedElement = document.getElementById("last-updated");
+const footerStatusElement = document.getElementById("footer-status");
 
 
 // ==========================================
@@ -131,8 +135,8 @@ function updateCpuChart(value) {
 
 function formatUptime(totalSeconds) {
     const seconds = Math.floor(totalSeconds);
-    const days    = Math.floor(seconds / 86400);
-    const hours   = Math.floor((seconds % 86400) / 3600);
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${days}d ${hours}h ${minutes}m`;
 }
@@ -176,9 +180,9 @@ async function loadMetrics() {
         // 7A. SERVER INFORMATION
         // --------------------------------------
 
-        hostnameElement.textContent        = data.server.hostname;
+        hostnameElement.textContent = data.server.hostname;
         operatingSystemElement.textContent = data.server.os;
-        architectureElement.textContent    = data.server.architecture;
+        architectureElement.textContent = data.server.architecture;
 
         // This header will be provided by Nginx later.
         const respondingWebServer = response.headers.get("X-Web-Server");
@@ -189,10 +193,10 @@ async function loadMetrics() {
         // --------------------------------------
 
         const cpuLoad1 = Number(data.cpu.loadAverage1);
-        cpuLoad1Element.textContent  = cpuLoad1.toFixed(2);
-        cpuLoad5Element.textContent  = Number(data.cpu.loadAverage5).toFixed(2);
+        cpuLoad1Element.textContent = cpuLoad1.toFixed(2);
+        cpuLoad5Element.textContent = Number(data.cpu.loadAverage5).toFixed(2);
         cpuLoad15Element.textContent = Number(data.cpu.loadAverage15).toFixed(2);
-        cpuCoresElement.textContent  = data.cpu.cores;
+        cpuCoresElement.textContent = data.cpu.cores;
 
         updateCpuChart(cpuLoad1);
 
@@ -200,12 +204,12 @@ async function loadMetrics() {
         // 7C. MEMORY INFORMATION
         // --------------------------------------
 
-        const memoryUsage     = Number(data.memory.usagePercent);
+        const memoryUsage = Number(data.memory.usagePercent);
         const safeMemoryUsage = Math.max(0, Math.min(100, memoryUsage));
 
         memoryUsageElement.textContent = `${memoryUsage.toFixed(1)}%`;
 
-        memoryBarElement.style.width      = `${safeMemoryUsage}%`;
+        memoryBarElement.style.width = `${safeMemoryUsage}%`;
         memoryBarElement.style.background = memoryBarColor(safeMemoryUsage);
 
         memoryProgressElement.setAttribute("aria-valuenow", safeMemoryUsage);
