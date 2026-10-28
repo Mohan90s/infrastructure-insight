@@ -37,6 +37,9 @@ Vagrant.configure("2") do |config|
           apt-get update -y
           apt-get install -y haproxy
           systemctl enable --now haproxy
+          cp /vagrant/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg
+          systemctl restart haproxy
+          systemctl enable haproxy
         SHELL
       end
 
