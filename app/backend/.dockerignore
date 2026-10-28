@@ -1,5 +1,24 @@
+# Version control
 .git
+.gitignore
+
+# Docker files
 Dockerfile
 .dockerignore
-README.md
+
+# Documentation
+*.md
+
+# Compiled binaries and executables
+server
+server.exe
 infrastructure-insight
+infrastructure-insight.exe
+*.exe
+*.bin
+*.out
+*.test
+
+# Test and coverage artifacts
+*.log
+coverage.*

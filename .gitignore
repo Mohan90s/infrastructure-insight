@@ -10,3 +10,11 @@ node_modules/
 __pycache__/
 
 package-lock.json
+
+# Build artifacts & archives
+*.tar
+manifest.json
+app/backend/infrastructure-insight
+app/backend/server
+app/backend/*.exe
+*.exe
