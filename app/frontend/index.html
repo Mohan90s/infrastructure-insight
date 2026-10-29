@@ -13,10 +13,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"
+        integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
+        crossorigin="anonymous"></script>
 
     <!-- Chart.js for CPU sparkline -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+
+    </script>
 
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
@@ -114,8 +118,8 @@
                 <article class="metric-card accent-purple">
                     <span class="metric-label"><i data-lucide="database"></i> Memory usage</span>
                     <strong id="memory-usage" class="metric-value">--%</strong>
-                    <div class="progress-track" role="progressbar" aria-label="System memory usage"
-                        aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="memory-progress">
+                    <div class="progress-track" role="progressbar" aria-label="System memory usage" aria-valuemin="0"
+                        aria-valuemax="100" aria-valuenow="0" id="memory-progress">
                         <div id="memory-bar" class="progress-bar"></div>
                     </div>
                     <p id="memory-description" class="metric-description">Waiting for memory data</p>
