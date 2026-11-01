@@ -28,6 +28,7 @@ func main() {
 	})
 
 	http.HandleFunc("/metrics", corsMiddleware(metricsHandler))
+	http.HandleFunc("/api/metrics", corsMiddleware(metricsHandler))
 
 	addr := ":5000"
 	fmt.Println("Server running at http://localhost:5000")
@@ -36,4 +37,3 @@ func main() {
 		log.Fatal("Server failed: ", err)
 	}
 }
-

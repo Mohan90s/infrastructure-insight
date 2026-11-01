@@ -45,10 +45,7 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 		hostname = "unknown"
 	}
 
-	clientIP, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		clientIP = r.RemoteAddr
-	}
+	clientIP := getClientIP(r)
 
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -193,4 +190,27 @@ func getSystemUptime() (float64, error) {
 
 func logEncodeError(err error) {
 	fmt.Printf("Failed to encode metrics response: %v\n", err)
+}
+
+// getClientIP extracts the original client IP from proxy headers, falling back to RemoteAddr.
+func getClientIP(r *http.Request) string {
+	forwarded := r.Header.Get("X-Forwarded-For")
+	if forwarded != "" {
+		parts := strings.Split(forwarded, ",")
+		clientIP := strings.TrimSpace(parts[0])
+		if clientIP != "" {
+			return clientIP
+		}
+	}
+
+	realIP := strings.TrimSpace(r.Header.Get("X-Real-IP"))
+	if realIP != "" {
+		return realIP
+	}
+
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
 }
