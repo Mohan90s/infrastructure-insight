@@ -109,16 +109,16 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getSystemMemory() (uint64, uint64, error) {
-	data, err := os.ReadFile("/proc/meminfo")
-	if err != nil {
-		return 0, 0, err
-	}
-
+// parseSystemMemory parses raw /proc/meminfo bytes into total and available MB.
+// Pure function: can be unit-tested without disk access.
+func parseSystemMemory(data []byte) (uint64, uint64, error) {
 	var totalKB uint64
 	var availableKB uint64
+	foundTotal := false
+	foundAvailable := false
 
-	for _, line := range strings.Split(string(data), "\n") {
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -126,66 +126,98 @@ func getSystemMemory() (uint64, uint64, error) {
 
 		switch fields[0] {
 		case "MemTotal:":
-			totalKB, err = strconv.ParseUint(fields[1], 10, 64)
-		case "MemAvailable:":
-			availableKB, err = strconv.ParseUint(fields[1], 10, 64)
-		default:
-			continue
-		}
+			val, err := strconv.ParseUint(fields[1], 10, 64)
+			if err != nil {
+				return 0, 0, fmt.Errorf("invalid MemTotal: %w", err)
+			}
+			totalKB = val
+			foundTotal = true
 
-		if err != nil {
-			return 0, 0, err
+		case "MemAvailable:":
+			val, err := strconv.ParseUint(fields[1], 10, 64)
+			if err != nil {
+				return 0, 0, fmt.Errorf("invalid MemAvailable: %w", err)
+			}
+			availableKB = val
+			foundAvailable = true
 		}
 	}
 
-	if totalKB == 0 {
-		return 0, 0, fmt.Errorf("total system memory not found")
+	if !foundTotal {
+		return 0, 0, fmt.Errorf("MemTotal not found in meminfo")
+	}
+	if !foundAvailable {
+		return 0, 0, fmt.Errorf("MemAvailable not found in meminfo")
+	}
+	if totalKB == 0 || availableKB > totalKB {
+		return 0, 0, fmt.Errorf("invalid memory values: total=%d, available=%d", totalKB, availableKB)
 	}
 
 	return totalKB / 1024, availableKB / 1024, nil
 }
 
-func getCPULoad() (float64, float64, float64, error) {
-	data, err := os.ReadFile("/proc/loadavg")
+// getSystemMemory reads /proc/meminfo and passes the bytes to parseSystemMemory.
+func getSystemMemory() (uint64, uint64, error) {
+	data, err := os.ReadFile("/proc/meminfo")
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, fmt.Errorf("reading /proc/meminfo: %w", err)
 	}
+	return parseSystemMemory(data)
+}
 
+// parseCPULoad parses raw /proc/loadavg bytes into 1, 5, and 15-minute load averages.
+// Pure function: can be unit-tested without disk access.
+func parseCPULoad(data []byte) (float64, float64, float64, error) {
 	fields := strings.Fields(string(data))
 	if len(fields) < 3 {
-		return 0, 0, 0, fmt.Errorf("invalid /proc/loadavg format")
+		return 0, 0, 0, fmt.Errorf("invalid /proc/loadavg format: expected at least 3 fields")
 	}
 
 	load1, err := strconv.ParseFloat(fields[0], 64)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, fmt.Errorf("invalid 1-min load: %w", err)
 	}
 
 	load5, err := strconv.ParseFloat(fields[1], 64)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, fmt.Errorf("invalid 5-min load: %w", err)
 	}
 
 	load15, err := strconv.ParseFloat(fields[2], 64)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, fmt.Errorf("invalid 15-min load: %w", err)
+	}
+
+	if load1 < 0 || load5 < 0 || load15 < 0 {
+		return 0, 0, 0, fmt.Errorf("CPU load values cannot be negative")
 	}
 
 	return load1, load5, load15, nil
 }
 
-func getSystemUptime() (float64, error) {
-	data, err := os.ReadFile("/proc/uptime")
+// getCPULoad reads /proc/loadavg and passes the bytes to parseCPULoad.
+func getCPULoad() (float64, float64, float64, error) {
+	data, err := os.ReadFile("/proc/loadavg")
 	if err != nil {
-		return 0, err
+		return 0, 0, fmt.Errorf("reading /proc/loadavg: %w", err)
 	}
+	return parseCPULoad(data)
+}
 
+func parseSystemUptime(data []byte) (float64, error) {
 	fields := strings.Fields(string(data))
 	if len(fields) < 1 {
 		return 0, fmt.Errorf("invalid /proc/uptime format")
 	}
-
 	return strconv.ParseFloat(fields[0], 64)
+}
+
+func getSystemUptime() (float64, error) {
+	data, err := os.ReadFile("/proc/uptime")
+	if err != nil {
+		return 0, fmt.Errorf("reading /proc/uptime: %w", err)
+	}
+	return parseSystemUptime(data)
 }
 
 func logEncodeError(err error) {
