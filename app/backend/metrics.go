@@ -39,13 +39,20 @@ type MetricsResponse struct {
 	ClientIP string     `json:"clientIP"`
 }
 
-func metricsHandler(w http.ResponseWriter, r *http.Request) {
+// MetricsProvider defines an interface for collecting system metrics.
+// This allows us to inject fake metrics during unit tests.
+type MetricsProvider interface {
+	Collect() (MetricsResponse, error)
+}
+
+// LinuxMetricsProvider collects real system metrics from the Linux OS.
+type LinuxMetricsProvider struct{}
+
+func (p LinuxMetricsProvider) Collect() (MetricsResponse, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
 	}
-
-	clientIP := getClientIP(r)
 
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -53,33 +60,26 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 
 	totalMB, availableMB, err := getSystemMemory()
 	if err != nil {
-		http.Error(w, "Failed to read system memory",
-			http.StatusInternalServerError)
-		return
+		return MetricsResponse{}, fmt.Errorf("reading memory: %w", err)
 	}
 
 	var memoryUsagePercent float64
 	if totalMB > 0 && availableMB <= totalMB {
 		usedMemory := totalMB - availableMB
-		memoryUsagePercent = float64(usedMemory) /
-			float64(totalMB) * 100
+		memoryUsagePercent = float64(usedMemory) / float64(totalMB) * 100
 	}
 
 	load1, load5, load15, err := getCPULoad()
 	if err != nil {
-		http.Error(w, "Failed to read CPU load",
-			http.StatusInternalServerError)
-		return
+		return MetricsResponse{}, fmt.Errorf("reading CPU load: %w", err)
 	}
 
 	uptime, err := getSystemUptime()
 	if err != nil {
-		http.Error(w, "Failed to read system uptime",
-			http.StatusInternalServerError)
-		return
+		return MetricsResponse{}, fmt.Errorf("reading uptime: %w", err)
 	}
 
-	metrics := MetricsResponse{
+	return MetricsResponse{
 		Server: ServerInfo{
 			Hostname:      hostname,
 			OS:            runtime.GOOS,
@@ -98,14 +98,31 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 			SystemAvailableMB: availableMB,
 			UsagePercent:      memoryUsagePercent,
 		},
-		ClientIP: clientIP,
-	}
+	}, nil
+}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Content-Type", "application/json")
+// metricsHandler creates an http.HandlerFunc using the provided MetricsProvider.
+func metricsHandler(provider MetricsProvider) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Enforce GET method only
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 
-	if err := json.NewEncoder(w).Encode(metrics); err != nil {
-		logEncodeError(err)
+		metrics, err := provider.Collect()
+		if err != nil {
+			http.Error(w, "Failed to collect system metrics", http.StatusInternalServerError)
+			return
+		}
+
+		// Attach the real client IP extracted from proxy headers
+		metrics.ClientIP = getClientIP(r)
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(metrics); err != nil {
+			logEncodeError(err)
+		}
 	}
 }
 

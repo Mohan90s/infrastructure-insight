@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-// corsMiddleware adds CORS headers to allow requests from file:// and any origin.
+// corsMiddleware adds CORS headers to allow requests from any origin.
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -22,13 +22,16 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// rootHandler handles requests to the root path ("/")
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Infrastructure Insight")
+}
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Infrastructure Insight")
-	})
+	provider := LinuxMetricsProvider{}
 
-	http.HandleFunc("/metrics", corsMiddleware(metricsHandler))
-	http.HandleFunc("/api/metrics", corsMiddleware(metricsHandler))
+	http.HandleFunc("/", rootHandler)
+	http.HandleFunc("/metrics", corsMiddleware(metricsHandler(provider)))
+	http.HandleFunc("/api/metrics", corsMiddleware(metricsHandler(provider)))
 
 	addr := ":5000"
 	fmt.Println("Server running at http://localhost:5000")
