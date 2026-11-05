@@ -1,12 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 )
 
 // Config holds validated application runtime configuration.
@@ -53,10 +59,32 @@ func loadConfig() (*Config, error) {
 			return nil, fmt.Errorf("invalid LISTEN_ADDR %q: %w", trimmed, err)
 		}
 
-		// Ensure host is either a valid IP or valid RFC 1123 hostname
+		// Reject spaces in host
+		if strings.Contains(host, " ") {
+			return nil, fmt.Errorf("invalid LISTEN_ADDR %q: host cannot contain spaces", trimmed)
+		}
+
 		if host != "" {
-			if net.ParseIP(host) == nil && !isValidHostname(host) {
-				return nil, fmt.Errorf("invalid LISTEN_ADDR %q: host %q is neither a valid IP nor a valid hostname", trimmed, host)
+			// If host has 4 parts of digits, it is an IPv4 address and must parse as a valid IP
+			parts := strings.Split(host, ".")
+			isIPv4Candidate := len(parts) == 4
+			if isIPv4Candidate {
+				for _, p := range parts {
+					if _, err := strconv.Atoi(p); err != nil {
+						isIPv4Candidate = false
+						break
+					}
+				}
+			}
+
+			if isIPv4Candidate {
+				if net.ParseIP(host) == nil {
+					return nil, fmt.Errorf("invalid LISTEN_ADDR %q: invalid host IP %q", trimmed, host)
+				}
+			} else {
+				if net.ParseIP(host) == nil && !isValidHostname(host) {
+					return nil, fmt.Errorf("invalid LISTEN_ADDR %q: host %q is neither a valid IP nor a valid hostname", trimmed, host)
+				}
 			}
 		}
 
@@ -163,4 +191,116 @@ func loadConfig() (*Config, error) {
 		AllowedOrigins: allowedOrigins,
 		TrustedProxies: trustedProxies,
 	}, nil
+}
+
+// corsMiddleware enforces allowed origins, adds Vary headers, and returns 403 on disallowed preflights.
+func corsMiddleware(next http.Handler, allowedOrigins []string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+
+		// Always set Vary: Origin when Origin is supplied by client
+		if origin != "" {
+			w.Header().Add("Vary", "Origin")
+		}
+
+		originAllowed := false
+		for _, allowed := range allowedOrigins {
+			if allowed == "*" || allowed == origin {
+				originAllowed = true
+				break
+			}
+		}
+
+		// Handle OPTIONS preflight requests
+		if r.Method == http.MethodOptions {
+			if origin != "" && !originAllowed {
+				http.Error(w, "CORS origin forbidden", http.StatusForbidden)
+				return
+			}
+			if originAllowed {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+				w.Header().Add("Vary", "Access-Control-Request-Method")
+				w.Header().Add("Vary", "Access-Control-Request-Headers")
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Standard GET requests
+		if originAllowed && origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// rootHandler ensures only exact "/" GET requests succeed.
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	fmt.Fprintln(w, "Infrastructure Insight")
+}
+
+func main() {
+	cfg, err := loadConfig()
+	if err != nil {
+		log.Fatalf("Configuration error: %v", err)
+	}
+
+	provider := LinuxMetricsProvider{}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", rootHandler)
+	mux.Handle("/metrics", metricsHandler(provider, cfg.TrustedProxies))
+	mux.Handle("/api/metrics", metricsHandler(provider, cfg.TrustedProxies))
+
+	wrappedHandler := corsMiddleware(mux, cfg.AllowedOrigins)
+
+	server := &http.Server{
+		Addr:         cfg.ListenAddr,
+		Handler:      wrappedHandler,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
+	serverErrChan := make(chan error, 1)
+	go func() {
+		log.Printf("Server starting on %s", cfg.ListenAddr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			serverErrChan <- err
+		}
+	}()
+
+	stopChan := make(chan os.Signal, 1)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case err := <-serverErrChan:
+		log.Fatalf("Server startup failed: %v", err)
+	case sig := <-stopChan:
+		log.Printf("Received signal %v, initiating graceful shutdown...", sig)
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("Server gracefully stopped.")
 }
