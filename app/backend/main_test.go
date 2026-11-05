@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -112,6 +113,12 @@ func TestLoadConfig_ListenAddr(t *testing.T) {
 		{
 			name:        "invalid host IP",
 			envVal:      "999.999.999.999:5000",
+			expectError: true,
+			errContains: "invalid host IP",
+		},
+		{
+			name:        "oversized numeric segment in host IP",
+			envVal:      "999999999999999999999.1.1.1:5000",
 			expectError: true,
 			errContains: "invalid host IP",
 		},
@@ -378,5 +385,74 @@ func TestRootHandler_MethodsAndRouting(t *testing.T) {
 	rootHandler(rr, req)
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("expected 404 Not Found, got %d", rr.Code)
+	}
+}
+
+// 7. Mock MetricsProvider for API contract test
+type mockMetricsProvider struct{}
+
+func (m mockMetricsProvider) Collect() (MetricsResponse, error) {
+	return MetricsResponse{
+		Server: ServerInfo{
+			Hostname:      "test-server",
+			OS:            "linux",
+			Architecture:  "amd64",
+			UptimeSeconds: 7200.5,
+		},
+		CPU: CPUInfo{
+			Cores:         2,
+			LoadAverage1:  0.25,
+			LoadAverage5:  0.35,
+			LoadAverage15: 0.45,
+		},
+		Memory: MemoryInfo{
+			AppUsedMB:         12,
+			SystemTotalMB:     1024,
+			SystemAvailableMB: 512,
+			UsagePercent:      50.0,
+		},
+	}, nil
+}
+
+// TestMetricsHandler_Contract directly verifies the /metrics JSON response schema
+func TestMetricsHandler_Contract(t *testing.T) {
+	provider := mockMetricsProvider{}
+	trusted := []string{"127.0.0.1"}
+	handler := metricsHandler(provider, trusted)
+
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	req.RemoteAddr = "127.0.0.1:54321"
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	// Verify HTTP 200 OK
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", rr.Code)
+	}
+
+	// Verify Content-Type is application/json
+	contentType := rr.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "application/json") {
+		t.Errorf("expected application/json Content-Type, got %q", contentType)
+	}
+
+	// Verify JSON structure unmarshals into MetricsResponse
+	var resp MetricsResponse
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode JSON response: %v", err)
+	}
+
+	if resp.Server.Hostname != "test-server" {
+		t.Errorf("expected hostname 'test-server', got %q", resp.Server.Hostname)
+	}
+	if resp.CPU.Cores != 2 {
+		t.Errorf("expected 2 CPU cores, got %d", resp.CPU.Cores)
+	}
+	if resp.Memory.SystemTotalMB != 1024 {
+		t.Errorf("expected 1024 MB total memory, got %d", resp.Memory.SystemTotalMB)
+	}
+	if resp.ClientIP != "127.0.0.1" {
+		t.Errorf("expected clientIP '127.0.0.1', got %q", resp.ClientIP)
 	}
 }

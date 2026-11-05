@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -58,7 +60,8 @@ MemAvailable:    2000000 kB`)
 		}
 	})
 }
-/ 2. Test /proc/loadavg parsing
+
+// 2. Test /proc/loadavg parsing
 func TestParseCPULoad(t *testing.T) {
 	t.Run("valid loadavg", func(t *testing.T) {
 		data := []byte("0.15 0.25 0.35 1/150 12345\n")
@@ -92,6 +95,7 @@ func TestParseCPULoad(t *testing.T) {
 		}
 	})
 }
+
 // 3. Test /proc/uptime parsing
 func TestParseSystemUptime(t *testing.T) {
 	t.Run("valid uptime", func(t *testing.T) {
@@ -119,7 +123,8 @@ func TestParseSystemUptime(t *testing.T) {
 		}
 	})
 }
-/ 4. Test Client IP extraction and proxy chain security
+
+// 4. Test Client IP extraction and proxy chain security
 func TestGetClientIP_Security(t *testing.T) {
 	trusted := []string{"192.168.56.10", "192.168.56.11", "192.168.56.12", "127.0.0.1"}
 	t.Run("direct connection from untrusted IP ignores spoofed X-Forwarded-For", func(t *testing.T) {

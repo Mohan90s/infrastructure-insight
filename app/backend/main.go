@@ -65,18 +65,26 @@ func loadConfig() (*Config, error) {
 		}
 
 		if host != "" {
-			// If host has 4 parts of digits, it is an IPv4 address and must parse as a valid IP
+			// If host has 4 parts, check if every part consists entirely of digits
 			parts := strings.Split(host, ".")
 			isIPv4Candidate := len(parts) == 4
 			if isIPv4Candidate {
 				for _, p := range parts {
-					if _, err := strconv.Atoi(p); err != nil {
+					if len(p) == 0 {
 						isIPv4Candidate = false
+						break
+					}
+					for _, ch := range p {
+						if ch < '0' || ch > '9' {
+							isIPv4Candidate = false
+							break
+						}
+					}
+					if !isIPv4Candidate {
 						break
 					}
 				}
 			}
-
 			if isIPv4Candidate {
 				if net.ParseIP(host) == nil {
 					return nil, fmt.Errorf("invalid LISTEN_ADDR %q: invalid host IP %q", trimmed, host)
@@ -87,7 +95,6 @@ func loadConfig() (*Config, error) {
 				}
 			}
 		}
-
 		port, err := strconv.Atoi(portStr)
 		if err != nil {
 			return nil, fmt.Errorf("invalid LISTEN_ADDR %q: port %q must be a valid integer", trimmed, portStr)
