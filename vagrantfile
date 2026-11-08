@@ -21,23 +21,16 @@ Vagrant.configure("2") do |config|
         vb.gui = false
       end
 
-      # 1. BASE SETUP: Create 'devops' user and enable SSH password authentication across all VMs
+      # 1. BASE SETUP: Create 'devops' user across all VMs
       node.vm.provision "shell", inline: <<-SHELL
-        # Create devops user with home directory and bash shell
         useradd -m -s /bin/bash devops || true
-
-        # Set secure password for devops user
-        echo "devops:DevOpsPassword123!" | chpasswd
-
-        # Add devops to sudo group (password required for administrative commands)
         usermod -aG sudo devops
-
-        # Enable SSH Password Authentication for rsync / sshpass
-        sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null || true
-        systemctl reload ssh || systemctl reload sshd || true
+        mkdir -p /home/devops/.ssh
+        chmod 700 /home/devops/.ssh
+        chown -R devops:devops /home/devops
       SHELL
 
-      # 2. Web Servers (web-01, web-02): Docker, Frontend Container & UFW Firewall
+      # 2. Web Servers (web-01, web-02): Proper Docker Build Context & Container Hostname
       if ["web-01", "web-02"].include?(server[:name])
         node.vm.provision "shell", inline: <<-SHELL
           apt-get update -y
@@ -46,12 +39,11 @@ Vagrant.configure("2") do |config|
           usermod -aG docker vagrant
           usermod -aG docker devops
 
-          # Build and start frontend container automatically
+          # Build from /vagrant root context so nginx/ and app/frontend/ paths resolve
           if [ -d "/vagrant/app/frontend" ]; then
-            cd /vagrant/app/frontend
-            docker build -t frontend:0.2 .
+            docker build -f /vagrant/app/frontend/Dockerfile -t frontend:0.2 /vagrant
             docker rm -f frontend || true
-            docker run -d --name frontend --restart unless-stopped -p 80:80 frontend:0.2
+            docker run -d --name frontend --hostname #{server[:name]} --restart unless-stopped -p 80:80 frontend:0.2
           fi
 
           # Firewall: Allow SSH, allow HTTP only from HAProxy (192.168.56.10)
@@ -64,7 +56,7 @@ Vagrant.configure("2") do |config|
         SHELL
       end
 
-      # 3. App Server: Docker, Backend Container & UFW Firewall
+      # 3. App Server: Docker Backend & SSH Key Authorization
       if server[:name] == "app-server"
         node.vm.provision "shell", inline: <<-SHELL
           apt-get update -y
@@ -73,12 +65,17 @@ Vagrant.configure("2") do |config|
           usermod -aG docker vagrant
           usermod -aG docker devops
 
-          # Build and start backend container automatically
           if [ -d "/vagrant/app/backend" ]; then
-            cd /vagrant/app/backend
-            docker build -t backend:latest .
+            docker build -t backend:latest /vagrant/app/backend
             docker rm -f backend || true
             docker run -d --name backend --restart unless-stopped -p 5000:5000 backend:latest
+          fi
+
+          # Authorize backup-server's devops SSH key if available
+          if [ -f /vagrant/.vagrant/devops_id_rsa.pub ]; then
+            cat /vagrant/.vagrant/devops_id_rsa.pub >> /home/devops/.ssh/authorized_keys
+            chmod 600 /home/devops/.ssh/authorized_keys
+            chown -R devops:devops /home/devops/.ssh
           fi
 
           # Firewall: Allow SSH, allow port 5000 only from web-01 and web-02
@@ -88,6 +85,7 @@ Vagrant.configure("2") do |config|
           ufw allow 22/tcp
           ufw allow from 192.168.56.11 to any port 5000 proto tcp
           ufw allow from 192.168.56.12 to any port 5000 proto tcp
+          ufw allow from 192.168.56.14 to any port 22 proto tcp
           ufw --force enable
         SHELL
       end
@@ -112,37 +110,46 @@ Vagrant.configure("2") do |config|
         SHELL
       end
 
-      # 5. Backup Server: Weekly Rsync Cron Job for /home/devops & UFW Firewall
+      # 5. Backup Server: Key-Based Rsync Backup with 30-Day Retention
       if server[:name] == "backup-server"
         node.vm.provision "shell", inline: <<-SHELL
           apt-get update -y
-          apt-get install -y rsync sshpass ufw
+          apt-get install -y rsync ufw
 
-          # Create backup storage directory
+          # Generate SSH key pair for devops if not present
+          if [ ! -f /home/devops/.ssh/id_rsa ]; then
+            su - devops -c "ssh-keygen -t rsa -b 2048 -N '' -f /home/devops/.ssh/id_rsa"
+            mkdir -p /vagrant/.vagrant
+            cp /home/devops/.ssh/id_rsa.pub /vagrant/.vagrant/devops_id_rsa.pub
+          fi
+
           mkdir -p /var/backups/devops
           chown -R devops:devops /var/backups/devops
 
-          # Create automated weekly backup script
+          # Key-based backup script with 30-day retention cleanup
           cat << 'EOF' > /usr/local/bin/backup-devops.sh
 #!/bin/bash
 set -e
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/var/backups/devops"
-mkdir -p "$BACKUP_DIR"
+mkdir -p "$BACKUP_DIR/latest"
 
-# Rsync /home/devops from app-server using sshpass
-sshpass -p 'DevOpsPassword123!' rsync -avz -e "ssh -o StrictHostKeyChecking=no" devops@192.168.56.13:/home/devops/ "$BACKUP_DIR/latest/"
+# Sync /home/devops from app-server using SSH key
+rsync -avz -e "ssh -i /home/devops/.ssh/id_rsa -o StrictHostKeyChecking=no" devops@192.168.56.13:/home/devops/ "$BACKUP_DIR/latest/"
 
-# Archive weekly snapshot
+# Create timestamped tarball
 tar -czf "$BACKUP_DIR/backup_$TIMESTAMP.tar.gz" -C "$BACKUP_DIR/latest" .
+
+# Retention policy: delete archives older than 30 days
+find "$BACKUP_DIR" -name "backup_*.tar.gz" -mtime +30 -delete
+
 echo "Backup completed successfully at $TIMESTAMP"
 EOF
           chmod +x /usr/local/bin/backup-devops.sh
 
-          # Install weekly cron job (Runs every Sunday at 02:00)
+          # Install weekly cron job (Sundays at 02:00)
           echo "0 2 * * 0 root /usr/local/bin/backup-devops.sh >> /var/log/backup-devops.log 2>&1" > /etc/cron.d/weekly-devops-backup
 
-          # Firewall: Allow SSH
           ufw --force reset
           ufw default deny incoming
           ufw default allow outgoing
