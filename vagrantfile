@@ -21,33 +21,133 @@ Vagrant.configure("2") do |config|
         vb.gui = false
       end
 
-      # Provision Docker on web servers and app server
-      if ["web-01", "web-02", "app-server"].include?(server[:name])
+      # 1. BASE SETUP: Create 'devops' user and enable SSH password authentication across all VMs
+      node.vm.provision "shell", inline: <<-SHELL
+        # Create devops user with home directory and bash shell
+        useradd -m -s /bin/bash devops || true
+
+        # Set secure password for devops user
+        echo "devops:DevOpsPassword123!" | chpasswd
+
+        # Add devops to sudo group (password required for administrative commands)
+        usermod -aG sudo devops
+
+        # Enable SSH Password Authentication for rsync / sshpass
+        sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null || true
+        systemctl reload ssh || systemctl reload sshd || true
+      SHELL
+
+      # 2. Web Servers (web-01, web-02): Docker, Frontend Container & UFW Firewall
+      if ["web-01", "web-02"].include?(server[:name])
         node.vm.provision "shell", inline: <<-SHELL
           apt-get update -y
-          apt-get install -y docker.io
+          apt-get install -y docker.io ufw
           systemctl enable --now docker
           usermod -aG docker vagrant
+          usermod -aG docker devops
+
+          # Build and start frontend container automatically
+          if [ -d "/vagrant/app/frontend" ]; then
+            cd /vagrant/app/frontend
+            docker build -t frontend:0.2 .
+            docker rm -f frontend || true
+            docker run -d --name frontend --restart unless-stopped -p 80:80 frontend:0.2
+          fi
+
+          # Firewall: Allow SSH, allow HTTP only from HAProxy (192.168.56.10)
+          ufw --force reset
+          ufw default deny incoming
+          ufw default allow outgoing
+          ufw allow 22/tcp
+          ufw allow from 192.168.56.10 to any port 80 proto tcp
+          ufw --force enable
         SHELL
       end
 
-      # Provision HAProxy on load balancer
+      # 3. App Server: Docker, Backend Container & UFW Firewall
+      if server[:name] == "app-server"
+        node.vm.provision "shell", inline: <<-SHELL
+          apt-get update -y
+          apt-get install -y docker.io ufw
+          systemctl enable --now docker
+          usermod -aG docker vagrant
+          usermod -aG docker devops
+
+          # Build and start backend container automatically
+          if [ -d "/vagrant/app/backend" ]; then
+            cd /vagrant/app/backend
+            docker build -t backend:latest .
+            docker rm -f backend || true
+            docker run -d --name backend --restart unless-stopped -p 5000:5000 backend:latest
+          fi
+
+          # Firewall: Allow SSH, allow port 5000 only from web-01 and web-02
+          ufw --force reset
+          ufw default deny incoming
+          ufw default allow outgoing
+          ufw allow 22/tcp
+          ufw allow from 192.168.56.11 to any port 5000 proto tcp
+          ufw allow from 192.168.56.12 to any port 5000 proto tcp
+          ufw --force enable
+        SHELL
+      end
+
+      # 4. Load Balancer: HAProxy & UFW Firewall
       if server[:name] == "load-balancer"
         node.vm.provision "shell", inline: <<-SHELL
           apt-get update -y
-          apt-get install -y haproxy
+          apt-get install -y haproxy ufw
           systemctl enable --now haproxy
           cp /vagrant/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg
           systemctl restart haproxy
-          systemctl enable haproxy
+
+          # Firewall: Allow SSH, HTTP (80), and Protected Stats (8404)
+          ufw --force reset
+          ufw default deny incoming
+          ufw default allow outgoing
+          ufw allow 22/tcp
+          ufw allow 80/tcp
+          ufw allow 8404/tcp
+          ufw --force enable
         SHELL
       end
 
-      # Provision rsync on backup server
+      # 5. Backup Server: Weekly Rsync Cron Job for /home/devops & UFW Firewall
       if server[:name] == "backup-server"
         node.vm.provision "shell", inline: <<-SHELL
           apt-get update -y
-          apt-get install -y rsync
+          apt-get install -y rsync sshpass ufw
+
+          # Create backup storage directory
+          mkdir -p /var/backups/devops
+          chown -R devops:devops /var/backups/devops
+
+          # Create automated weekly backup script
+          cat << 'EOF' > /usr/local/bin/backup-devops.sh
+#!/bin/bash
+set -e
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/var/backups/devops"
+mkdir -p "$BACKUP_DIR"
+
+# Rsync /home/devops from app-server using sshpass
+sshpass -p 'DevOpsPassword123!' rsync -avz -e "ssh -o StrictHostKeyChecking=no" devops@192.168.56.13:/home/devops/ "$BACKUP_DIR/latest/"
+
+# Archive weekly snapshot
+tar -czf "$BACKUP_DIR/backup_$TIMESTAMP.tar.gz" -C "$BACKUP_DIR/latest" .
+echo "Backup completed successfully at $TIMESTAMP"
+EOF
+          chmod +x /usr/local/bin/backup-devops.sh
+
+          # Install weekly cron job (Runs every Sunday at 02:00)
+          echo "0 2 * * 0 root /usr/local/bin/backup-devops.sh >> /var/log/backup-devops.log 2>&1" > /etc/cron.d/weekly-devops-backup
+
+          # Firewall: Allow SSH
+          ufw --force reset
+          ufw default deny incoming
+          ufw default allow outgoing
+          ufw allow 22/tcp
+          ufw --force enable
         SHELL
       end
     end
