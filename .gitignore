@@ -4,6 +4,8 @@
 # Logs and environment
 *.log
 .DS_Store
+.env
+*.env
 
 # Dependencies
 node_modules/

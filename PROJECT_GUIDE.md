@@ -130,7 +130,7 @@ curl.exe -i http://192.168.56.10/api/metrics
 ### 4. Verify HAProxy Stats Dashboard Security
 Open `http://192.168.56.10:8404` in your browser:
 * Prompts for HTTP Basic Authentication.
-* Login with username: `admin`, password: `ChangeMeInDotEnv123!`.
+* Authenticates using the configured administrative credentials.
 * Shows real-time server health and active connection statistics.
 
 ### 5. Verify Backup Execution & Disaster Recovery

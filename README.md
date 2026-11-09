@@ -134,10 +134,9 @@ curl.exe -i http://192.168.56.10/api/metrics
 Both return `HTTP/1.1 200 OK` with `Content-Type: application/json; charset=utf-8`.
 
 ### 3. HAProxy Administrative Stats
-Access the password-protected statistics portal:
+Access the statistics portal on dedicated port 8404:
 * **URL:** `http://192.168.56.10:8404`
-* **Username:** `admin`
-* **Password:** `ChangeMeInDotEnv123!`
+* **Access Control:** Protected by HTTP Basic Authentication via environment variables (`${HAPROXY_STATS_USER}` / `${HAPROXY_STATS_PASSWORD}`) and restricted in UFW strictly to the administrator workstation (`192.168.56.1`).
 
 ### 4. Failover Verification
 Simulate an outage on `web-01`:
