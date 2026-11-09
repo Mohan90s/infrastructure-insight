@@ -1,12 +1,13 @@
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/jammy64"
 
+  # backup-server is defined FIRST so its SSH key is created before app-server provisions
   servers = [
+    { name: "backup-server", ip: "192.168.56.14", memory: 512 },
     { name: "load-balancer", ip: "192.168.56.10", memory: 512 },
     { name: "web-01",        ip: "192.168.56.11", memory: 512 },
     { name: "web-02",        ip: "192.168.56.12", memory: 512 },
-    { name: "app-server",    ip: "192.168.56.13", memory: 1024 },
-    { name: "backup-server", ip: "192.168.56.14", memory: 512 }
+    { name: "app-server",    ip: "192.168.56.13", memory: 1024 }
   ]
 
   servers.each do |server|
@@ -30,7 +31,77 @@ Vagrant.configure("2") do |config|
         chown -R devops:devops /home/devops
       SHELL
 
-      # 2. Web Servers (web-01, web-02): Proper Docker Build Context & Container Hostname
+      # 2. Backup Server (Generates SSH keypair for app-server communication)
+      if server[:name] == "backup-server"
+        node.vm.provision "shell", inline: <<-SHELL
+          apt-get update -y
+          apt-get install -y rsync ufw
+
+          # Generate dedicated SSH key for devops if not present
+          if [ ! -f /home/devops/.ssh/id_rsa ]; then
+            su - devops -c "ssh-keygen -t rsa -b 2048 -N '' -f /home/devops/.ssh/id_rsa"
+            mkdir -p /vagrant/.vagrant/keys
+            cp /home/devops/.ssh/id_rsa.pub /vagrant/.vagrant/keys/backup_key.pub
+          fi
+
+          mkdir -p /var/backups/devops/latest
+          chown -R devops:devops /var/backups/devops
+
+          # Scan and store app-server host key automatically (eliminates StrictHostKeyChecking=no)
+          mkdir -p /home/devops/.ssh
+          ssh-keyscan -H 192.168.56.13 >> /home/devops/.ssh/known_hosts 2>/dev/null || true
+          chown -R devops:devops /home/devops/.ssh
+
+          # Automated Backup Script with --delete, /etc backup, and 30-day retention
+          cat << 'EOF' > /usr/local/bin/backup-devops.sh
+#!/bin/bash
+set -e
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/var/backups/devops"
+mkdir -p "$BACKUP_DIR/latest"
+
+ssh-keyscan -H 192.168.56.13 >> /home/devops/.ssh/known_hosts 2>/dev/null || true
+
+# Rsync with --delete to prune stale files
+rsync -avz --delete -e "ssh -i /home/devops/.ssh/id_rsa" devops@192.168.56.13:/home/devops/ "$BACKUP_DIR/latest/devops/"
+rsync -avz --delete -e "ssh -i /home/devops/.ssh/id_rsa" devops@192.168.56.13:/etc/hosts "$BACKUP_DIR/latest/etc_hosts"
+
+# Archive snapshot
+tar -czf "$BACKUP_DIR/backup_$TIMESTAMP.tar.gz" -C "$BACKUP_DIR/latest" .
+
+# Retention policy: delete archives older than 30 days
+find "$BACKUP_DIR" -name "backup_*.tar.gz" -mtime +30 -delete
+echo "Backup completed successfully at $TIMESTAMP"
+EOF
+          chmod +x /usr/local/bin/backup-devops.sh
+
+          # Automated Restore Script
+          cat << 'EOF' > /usr/local/bin/restore-devops.sh
+#!/bin/bash
+set -e
+BACKUP_DIR="/var/backups/devops/latest/devops"
+if [ ! -d "$BACKUP_DIR" ]; then
+  echo "Error: No backup found in $BACKUP_DIR"
+  exit 1
+fi
+echo "Restoring /home/devops to app-server (192.168.56.13)..."
+rsync -avz -e "ssh -i /home/devops/.ssh/id_rsa" "$BACKUP_DIR/" devops@192.168.56.13:/home/devops/
+echo "Restore complete!"
+EOF
+          chmod +x /usr/local/bin/restore-devops.sh
+
+          # Weekly cron job on Sundays at 02:00
+          echo "0 2 * * 0 root /usr/local/bin/backup-devops.sh >> /var/log/backup-devops.log 2>&1" > /etc/cron.d/weekly-devops-backup
+
+          ufw --force reset
+          ufw default deny incoming
+          ufw default allow outgoing
+          ufw allow 22/tcp
+          ufw --force enable
+        SHELL
+      end
+
+      # 3. Web Servers (web-01, web-02)
       if ["web-01", "web-02"].include?(server[:name])
         node.vm.provision "shell", inline: <<-SHELL
           apt-get update -y
@@ -56,7 +127,7 @@ Vagrant.configure("2") do |config|
         SHELL
       end
 
-      # 3. App Server: Docker Backend & SSH Key Authorization
+      # 4. App Server (Go Backend & SSH Key Authorization)
       if server[:name] == "app-server"
         node.vm.provision "shell", inline: <<-SHELL
           apt-get update -y
@@ -71,14 +142,14 @@ Vagrant.configure("2") do |config|
             docker run -d --name backend --restart unless-stopped -p 5000:5000 backend:latest
           fi
 
-          # Authorize backup-server's devops SSH key if available
-          if [ -f /vagrant/.vagrant/devops_id_rsa.pub ]; then
-            cat /vagrant/.vagrant/devops_id_rsa.pub >> /home/devops/.ssh/authorized_keys
+          # Authorize backup-server's devops SSH key
+          if [ -f /vagrant/.vagrant/keys/backup_key.pub ]; then
+            cat /vagrant/.vagrant/keys/backup_key.pub >> /home/devops/.ssh/authorized_keys
             chmod 600 /home/devops/.ssh/authorized_keys
             chown -R devops:devops /home/devops/.ssh
           fi
 
-          # Firewall: Allow SSH, allow port 5000 only from web-01 and web-02
+          # Firewall: Allow SSH, allow port 5000 only from web-01 and web-02, allow 22 from backup-server
           ufw --force reset
           ufw default deny incoming
           ufw default allow outgoing
@@ -90,7 +161,7 @@ Vagrant.configure("2") do |config|
         SHELL
       end
 
-      # 4. Load Balancer: HAProxy & UFW Firewall
+      # 5. Load Balancer (HAProxy & Protected Stats)
       if server[:name] == "load-balancer"
         node.vm.provision "shell", inline: <<-SHELL
           apt-get update -y
@@ -99,61 +170,13 @@ Vagrant.configure("2") do |config|
           cp /vagrant/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg
           systemctl restart haproxy
 
-          # Firewall: Allow SSH, HTTP (80), and Protected Stats (8404)
+          # Firewall: Allow SSH, HTTP (80), and restrict stats (8404) to admin host only
           ufw --force reset
           ufw default deny incoming
           ufw default allow outgoing
           ufw allow 22/tcp
           ufw allow 80/tcp
-          ufw allow 8404/tcp
-          ufw --force enable
-        SHELL
-      end
-
-      # 5. Backup Server: Key-Based Rsync Backup with 30-Day Retention
-      if server[:name] == "backup-server"
-        node.vm.provision "shell", inline: <<-SHELL
-          apt-get update -y
-          apt-get install -y rsync ufw
-
-          # Generate SSH key pair for devops if not present
-          if [ ! -f /home/devops/.ssh/id_rsa ]; then
-            su - devops -c "ssh-keygen -t rsa -b 2048 -N '' -f /home/devops/.ssh/id_rsa"
-            mkdir -p /vagrant/.vagrant
-            cp /home/devops/.ssh/id_rsa.pub /vagrant/.vagrant/devops_id_rsa.pub
-          fi
-
-          mkdir -p /var/backups/devops
-          chown -R devops:devops /var/backups/devops
-
-          # Key-based backup script with 30-day retention cleanup
-          cat << 'EOF' > /usr/local/bin/backup-devops.sh
-#!/bin/bash
-set -e
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/var/backups/devops"
-mkdir -p "$BACKUP_DIR/latest"
-
-# Sync /home/devops from app-server using SSH key
-rsync -avz -e "ssh -i /home/devops/.ssh/id_rsa -o StrictHostKeyChecking=no" devops@192.168.56.13:/home/devops/ "$BACKUP_DIR/latest/"
-
-# Create timestamped tarball
-tar -czf "$BACKUP_DIR/backup_$TIMESTAMP.tar.gz" -C "$BACKUP_DIR/latest" .
-
-# Retention policy: delete archives older than 30 days
-find "$BACKUP_DIR" -name "backup_*.tar.gz" -mtime +30 -delete
-
-echo "Backup completed successfully at $TIMESTAMP"
-EOF
-          chmod +x /usr/local/bin/backup-devops.sh
-
-          # Install weekly cron job (Sundays at 02:00)
-          echo "0 2 * * 0 root /usr/local/bin/backup-devops.sh >> /var/log/backup-devops.log 2>&1" > /etc/cron.d/weekly-devops-backup
-
-          ufw --force reset
-          ufw default deny incoming
-          ufw default allow outgoing
-          ufw allow 22/tcp
+          ufw allow from 192.168.56.1 to any port 8404 proto tcp
           ufw --force enable
         SHELL
       end
