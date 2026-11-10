@@ -13,7 +13,6 @@ A highly available, multi-tier Linux infrastructure monitoring and diagnostic te
 | **Vagrant Manifest** | Infrastructure-as-Code manifest provisioning all 5 VMs, Docker containers, UFW firewalls, and backup automation. | [vagrantfile](vagrantfile) |
 | **HAProxy Configuration** | Layer 7 load balancing rules, `/health` probes, and environment-authenticated stats portal. | [haproxy.cfg](haproxy/haproxy.cfg) |
 | **Nginx Configuration** | Static SPA serving, `/health` endpoint, dual `/metrics` & `/api/metrics` reverse proxy, and `X-Web-Server` header. | [nginx.conf](nginx/nginx.conf) |
-| **Environment Template** | Configuration template for backend ports, trusted proxies, CORS origins, and HAProxy stats credentials. | [.env.example](.env.example) |
 
 ---
 
@@ -68,9 +67,10 @@ All five virtual machines communicate over an isolated VirtualBox host-only subn
 ### 1.4 Operating Procedures
 
 #### Step 1: Configure Local Environment Variables
-Before launching the cluster, copy the environment template to a local `.env` file (ignored by Git) and set your HAProxy stats credentials:
-```powershell
-cp .env.example .env
+Before launching the cluster, ensure a local `.env` file (ignored by Git) exists in the project root with your HAProxy stats credentials (`HAPROXY_STATS_USER` and `HAPROXY_STATS_PASSWORD`):
+```ini
+HAPROXY_STATS_USER=admin
+HAPROXY_STATS_PASSWORD=your_secure_password
 ```
 
 #### Step 2: Starting the Environment
