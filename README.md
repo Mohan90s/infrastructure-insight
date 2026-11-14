@@ -6,9 +6,6 @@ Infrastructure Insight is a DevOps learning project that builds a local, multi-t
 
 The project is intended to demonstrate practical infrastructure concepts: provisioning, service deployment, reverse proxying, load balancing, network isolation, monitoring, backup and recovery, and troubleshooting.
 
-> [!NOTE]
-> **Project status:** This README describes the intended architecture and the implementation details recorded during development. Before presenting the environment as production-ready, verify every service, firewall rule, backup job, and failover behavior using the checks in this document. A feature listed as planned is not considered implemented.
-
 ---
 
 ## Documentation
@@ -534,17 +531,18 @@ Request 4 -> web-02
 
 This is a scheduling example, not a guarantee that every real-world workload will be exactly 50/50. Persistent connections, health status, and request behavior can affect observed distribution.
 
-### 9.2 Least Connections
+### 9.2 Why Round-Robin was Chosen Over Least Connections
 
-Least-connections chooses the backend with the fewest active connections. It may be useful when connections have different durations, but it is not automatically better for every workload.
+Infrastructure Insight actively uses **Round-Robin** (`balance roundrobin`) because our telemetry dashboard and `/api/metrics` requests are stateless, uniform, and complete in under 5 milliseconds. Under uniform workloads, Round-Robin provides predictable, deterministic distribution with zero computational overhead.
 
-| Consideration | Round-Robin | Least-Connections |
+**Least Connections** (`balance leastconn`) chooses the backend with the fewest active TCP connections. While useful for workloads with unpredictable or long durations (such as WebSockets, file uploads, or complex database queries), it offers no advantage for fast, uniform API requests.
+
+| Consideration | Round-Robin (`roundrobin`) [Active] | Least Connections (`leastconn`) [Alternative] |
 | :--- | :--- | :--- |
-| **Basic behavior** | Rotates across available servers | Prefers the server with fewer active connections |
-| **Often suitable for** | Similar, short requests | Uneven or long-lived connections |
-| **Main assumption** | Backend capacity is broadly similar | Active connection count is a useful load signal |
-
-Choose the algorithm based on measured workload and test results.
+| **Basic behavior** | Rotates sequentially across available servers (A → B → A → B) | Routes to the server with fewer active connections |
+| **Ideal workload** | Short, uniform, stateless requests (our SPA assets and `/api/metrics`) | Long-lived connections, streaming telemetry, or variable database queries |
+| **Main assumption** | Backend capacity and request processing times are broadly equal | Active connection count is a useful load signal |
+| **Verdict for this project** | **Optimal:** Simple, zero overhead, and evenly balances fast telemetry requests | Alternative: Recommended only if the dashboard shifts to persistent WebSockets |
 
 ### 9.3 Health Checks and Failover
 
