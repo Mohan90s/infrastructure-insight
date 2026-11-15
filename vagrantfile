@@ -181,11 +181,9 @@ EOF
           apt-get update -y
           apt-get install -y haproxy ufw
 
-          # Load stats credentials into HAProxy service environment
-          echo "HAPROXY_STATS_USER=\"#{stats_user}\"" > /etc/default/haproxy
-          echo "HAPROXY_STATS_PASSWORD=\"#{stats_pass}\"" >> /etc/default/haproxy
-
+          # Configure HAProxy with credentials from .env
           cp /vagrant/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg
+          sed -i 's/stats auth .*/stats auth #{stats_user}:#{stats_pass}/' /etc/haproxy/haproxy.cfg
           systemctl restart haproxy
 
           # Firewall: Allow SSH, HTTP (80), and restrict stats (8404) to admin host only

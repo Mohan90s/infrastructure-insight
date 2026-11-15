@@ -752,5 +752,4 @@ This project provides practical experience with:
 ---
 
 **Project:** Infrastructure Insight  
-**Author:** Mohan Thapa  
-**Status:** Learning project — implementation and verification status should be updated as the infrastructure evolves.
+**Author:** Mohan Thapa
