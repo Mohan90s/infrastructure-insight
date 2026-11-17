@@ -13,7 +13,10 @@ Vagrant.configure("2") do |config|
   end
 
   stats_user = ENV["HAPROXY_STATS_USER"] || "admin"
-  stats_pass = ENV["HAPROXY_STATS_PASSWORD"] || "ChangeMeInDotEnv123!"
+  stats_pass = ENV["HAPROXY_STATS_PASSWORD"].to_s
+  if stats_pass.empty? && (ARGV & %w[up provision reload]).any?
+    abort("ERROR: Please set HAPROXY_STATS_PASSWORD in your .env file")
+  end
 
   # backup-server is defined FIRST so its SSH key is created before app-server provisions
   servers = [
@@ -77,8 +80,9 @@ mkdir -p "$BACKUP_DIR/latest"
 ssh-keyscan -H 192.168.56.13 >> /home/devops/.ssh/known_hosts 2>/dev/null || true
 
 # Rsync with --delete to prune stale files
-rsync -avz --delete -e "ssh -i /home/devops/.ssh/id_rsa" devops@192.168.56.13:/home/devops/ "$BACKUP_DIR/latest/devops/"
-rsync -avz --delete -e "ssh -i /home/devops/.ssh/id_rsa" devops@192.168.56.13:/etc/hosts "$BACKUP_DIR/latest/etc_hosts"
+SSH_OPTS="ssh -i /home/devops/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/home/devops/.ssh/known_hosts"
+rsync -avz --delete -e "$SSH_OPTS" devops@192.168.56.13:/home/devops/ "$BACKUP_DIR/latest/devops/"
+rsync -avz --delete -e "$SSH_OPTS" devops@192.168.56.13:/etc/hosts "$BACKUP_DIR/latest/etc_hosts"
 
 # Archive snapshot
 tar -czf "$BACKUP_DIR/backup_$TIMESTAMP.tar.gz" -C "$BACKUP_DIR/latest" .
@@ -99,7 +103,7 @@ if [ ! -d "$BACKUP_DIR" ]; then
   exit 1
 fi
 echo "Restoring /home/devops to app-server (192.168.56.13)..."
-rsync -avz -e "ssh -i /home/devops/.ssh/id_rsa" "$BACKUP_DIR/" devops@192.168.56.13:/home/devops/
+rsync -avz -e "ssh -i /home/devops/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/home/devops/.ssh/known_hosts" "$BACKUP_DIR/" devops@192.168.56.13:/home/devops/
 echo "Restore complete!"
 EOF
           chmod +x /usr/local/bin/restore-devops.sh
@@ -183,7 +187,7 @@ EOF
 
           # Configure HAProxy with credentials from .env
           cp /vagrant/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg
-          sed -i 's/stats auth .*/stats auth #{stats_user}:#{stats_pass}/' /etc/haproxy/haproxy.cfg
+          sed -i 's|stats auth .*|stats auth #{stats_user}:#{stats_pass}|' /etc/haproxy/haproxy.cfg
           systemctl restart haproxy
 
           # Firewall: Allow SSH, HTTP (80), and restrict stats (8404) to admin host only
